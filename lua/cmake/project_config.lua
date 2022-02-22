@@ -7,8 +7,9 @@ local ProjectConfig = {}
 ProjectConfig.__index = ProjectConfig
 
 local json_defaults = {
+  run_dir = ".",
   args = {},
-  build_type = 'Debug',
+  build_type = 'Release',
 }
 
 local function split_args(args)
