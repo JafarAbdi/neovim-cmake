@@ -164,6 +164,43 @@ function cmake.select_build_type()
   end)
 end
 
+function cmake.auto_select_target(file_path)
+  file_path = vim.F.if_nil(file_path, vim.fn.expand("%:p"))
+  local project_config = ProjectConfig.new()
+  local source_target_mapping = {}
+  for _, target in ipairs(project_config:get_codemodel_targets()) do
+    local target_info = project_config:get_target_info(target)
+    if target_info['type'] == 'EXECUTABLE' then
+      for _, source_info in ipairs(target_info["sources"]) do
+        local source = project_config:get_source_dir():joinpath(source_info["path"]).filename
+        local source_tbl = vim.tbl_get(source_target_mapping, source)
+        if source_tbl == nil then
+            source_target_mapping[source] = {}
+        end
+        table.insert(source_target_mapping[source], target_info['name'])
+      end
+    end
+  end
+
+  local targets = source_target_mapping[file_path]
+  if targets == nil then
+      return false
+  end
+  if #targets == 1 then
+    project_config.json.current_target = targets[1]
+    project_config:write()
+  else
+    vim.ui.select(targets, { prompt = 'Select target' }, function(_, idx)
+      if not idx then
+        return false
+      end
+      project_config.json.current_target = targets[idx]
+      project_config:write()
+    end)
+  end
+  return true
+end
+
 function cmake.select_target()
   local project_config = ProjectConfig.new()
   if not project_config:get_build_dir():is_dir() then
