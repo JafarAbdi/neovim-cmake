@@ -28,6 +28,24 @@ function ProjectConfig:write()
   parameters_file:write(vim.json.encode(self.json), 'w')
 end
 
+function ProjectConfig:get_codemodel_json()
+  local found_files = scandir.scan_dir(self:get_reply_dir().filename, { search_pattern = 'codemodel*' })
+  if #found_files == 0 then
+    utils.notify('Unable to find codemodel file', vim.log.levels.ERROR)
+    return {}
+  end
+  local codemodel = Path:new(found_files[1])
+  return vim.json.decode(codemodel:read())
+end
+
+function ProjectConfig:get_source_dir()
+  if self.source_dir then
+    return self.source_dir
+  end
+  self.source_dir = Path:new(self:get_codemodel_json()["paths"]["source"])
+  return self.source_dir
+end
+
 function ProjectConfig:get_build_dir()
   -- Return cached result
   if self.build_dir then
@@ -56,14 +74,7 @@ function ProjectConfig:get_reply_dir()
 end
 
 function ProjectConfig:get_codemodel_targets()
-  local found_files = scandir.scan_dir(self:get_reply_dir().filename, { search_pattern = 'codemodel*' })
-  if #found_files == 0 then
-    utils.notify('Unable to find codemodel file', vim.log.levels.ERROR)
-    return {}
-  end
-  local codemodel = Path:new(found_files[1])
-  local codemodel_json = vim.json.decode(codemodel:read())
-  return codemodel_json['configurations'][1]['targets']
+  return self:get_codemodel_json()['configurations'][1]['targets']
 end
 
 function ProjectConfig:get_target_info(codemodel_target) return vim.json.decode((self:get_reply_dir() / codemodel_target['jsonFile']):read()) end
